@@ -109,11 +109,46 @@ app.post('/api/command/config', (req, res) => {
 });
 
 app.get('/api/dashboard/data', (req, res) => {
-    const botsList = Object.keys(botDatabase).map(user => ({
-        username: user,
-        ...botDatabase[user],
-        lastUpdatedFormatted: new Date(botDatabase[user].lastHeartbeat).toLocaleTimeString('id-ID')
-    }));
+    const botsList = [];
+    const now = Date.now();
+
+    for (let user in botDatabase) {
+        const bot = botDatabase[user];
+        const timeDiff = now - bot.lastHeartbeat;
+
+        // SOLUSI 1: Jika bot mati / tidak ada kabar lebih dari 2 menit, hapus dari dashboard
+        if (timeDiff > 120000) {
+            delete botDatabase[user];
+            continue; 
+        }
+
+        // Jika > 30 detik tanpa kabar, ubah teks jadi OFFLINE (peringatan sebelum dihapus)
+        const isTimeout = timeDiff > 30000;
+        
+        botsList.push({
+            username: user,
+            ...bot,
+            status: isTimeout ? 'OFFLINE' : bot.status,
+            lastUpdatedFormatted: new Date(bot.lastHeartbeat).toLocaleTimeString('id-ID')
+        });
+    }
+
+    // SOLUSI 2: Urutkan RF secara "Pintar" (RF-2 akan di atas RF-11)
+    // SOLUSI 2: Urutkan RF secara Teks/Abjad (1, 11, 111, 2, 22, 222)
+    botsList.sort((a, b) => {
+        const rfA = String(a.rf_location);
+        const rfB = String(b.rf_location);
+        
+        // Membandingkan murni sebagai teks (tanpa mode numeric)
+        const compareRF = rfA.localeCompare(rfB);
+        
+        if (compareRF !== 0) {
+            return compareRF; // Jika RF beda, urutkan berdasarkan teks RF
+        }
+        
+        // Jika RF-nya sama, urutkan berdasarkan abjad nama akunnya
+        return a.username.localeCompare(b.username);
+    });
 
     const totalBucks = botsList.reduce((acc, bot) => acc + bot.bucks, 0);
     const totalCrystalEggs = botsList.reduce((acc, bot) => acc + (bot.crystalEggCount || 0), 0);
