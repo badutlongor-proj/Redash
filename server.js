@@ -413,4 +413,14 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, () => console.log(`Dashboard Live di http://localhost:${PORT}`));
+const PORT = process.env.PORT || 3000;
+
+// Jalankan server lokal HANYA jika tidak berjalan di Vercel (production)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server berjalan di port ${PORT}`);
+    });
+}
+
+// INI WAJIB UNTUK VERCEL: Export app agar dibaca sebagai Serverless Function
+module.exports = app;
