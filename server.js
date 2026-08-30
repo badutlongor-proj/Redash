@@ -116,14 +116,15 @@ app.get('/api/dashboard/data', (req, res) => {
         const bot = botDatabase[user];
         const timeDiff = now - bot.lastHeartbeat;
 
-        // SOLUSI 1: Jika bot mati / tidak ada kabar lebih dari 2 menit, hapus dari dashboard
-        if (timeDiff > 120000) {
+        // Hapus permanen jika sudah 24 jam (1 hari) tidak aktif sama sekali
+        if (timeDiff > 86400000) {
             delete botDatabase[user];
             continue; 
         }
 
-        // Jika > 30 detik tanpa kabar, ubah teks jadi OFFLINE (peringatan sebelum dihapus)
-        const isTimeout = timeDiff > 30000;
+        // TOLERANSI AKURAT: Bot baru akan terbaca OFFLINE jika tidak melapor selama > 3 menit (180000 ms)
+        // Ini sangat aman untuk mengantisipasi delay script 60 detik + sedikit lag Roblox
+        const isTimeout = timeDiff > 180000;
         
         botsList.push({
             username: user,
@@ -133,21 +134,16 @@ app.get('/api/dashboard/data', (req, res) => {
         });
     }
 
-    // SOLUSI 2: Urutkan RF secara "Pintar" (RF-2 akan di atas RF-11)
-    // SOLUSI 2: Urutkan RF secara Teks/Abjad (1, 11, 111, 2, 22, 222)
-    // SOLUSI UTAMA: Kunci urutan berdasarkan awalan RF dan pastikan posisi stabil
+    // Urutkan stabil abjad murni
     botsList.sort((a, b) => {
         const rfA = String(a.rf_location || "").trim();
         const rfB = String(b.rf_location || "").trim();
         
-        // 1. Urutkan berdasarkan teks RF (Contoh: 1, 11, 111, 2, 22...)
         const compareRF = rfA.localeCompare(rfB);
         if (compareRF !== 0) {
             return compareRF; 
         }
         
-        // 2. Jika RF-nya sama persis, kunci urutan berdasarkan abjad nama akun (Username)
-        // Ini membuat posisi akun 1, akun 2, dst di RF yang sama tidak akan ever naik-turun
         return a.username.localeCompare(b.username);
     });
 
@@ -178,12 +174,10 @@ app.get('/', (req, res) => {
             .modal-content { background: #1e293b; width: 500px; max-height: 85vh; overflow-y: auto; margin: 50px auto; padding: 20px; border-radius: 10px; border: 1px solid #38bdf8; }
             input, select { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; width: 100%; border-radius: 5px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; }
             
-            /* Styling Chip Item Terpilih */
             .selected-items-box { display: flex; flex-wrap: wrap; gap: 6px; background: #0f172a; padding: 8px; border-radius: 5px; border: 1px solid #334155; min-height: 40px; margin-bottom: 10px; }
             .item-chip { background: #2563eb; color: white; padding: 4px 10px; border-radius: 15px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
             .item-chip span { cursor: pointer; font-weight: bold; color: #f87171; }
             
-            /* Styling Dropdown Hasil Pencarian Master List */
             .dropdown-list { max-height: 150px; overflow-y: auto; background: #0f172a; border: 1px solid #334155; border-radius: 5px; margin-bottom: 15px; display: none; }
             .dropdown-option { padding: 8px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #1e293b; }
             .dropdown-option:hover { background: #1e293b; color: #38bdf8; }
@@ -219,7 +213,7 @@ app.get('/', (req, res) => {
             </table>
         </div>
 
-        <!-- Modal Pengaturan Trade (Full Manual Master List & Search) -->
+        <!-- Modal Pengaturan Trade -->
         <div id="trade-modal" class="modal">
             <div class="modal-content">
                 <h3 id="modal-trade-title">Pengaturan Trade Bot</h3>
@@ -231,7 +225,7 @@ app.get('/', (req, res) => {
                 </div>
 
                 <label>Cari & Pilih dari Master List Item:</label>
-                <input type="text" id="trade-search-input" placeholder="🔍 Ketik nama item (misal: Alicorn, Potion)..." onkeyup="filterMasterItems()" autocomplete="off">
+                <input type="text" id="trade-search-input" placeholder="🔍 Ketik nama item..." onkeyup="filterMasterItems()" autocomplete="off">
                 <div id="trade-dropdown" class="dropdown-list"></div>
                 
                 <label>Username Penerima (Receiver):</label>
@@ -248,7 +242,7 @@ app.get('/', (req, res) => {
             </div>
         </div>
 
-        <!-- Modal Lihat Tas Sesuai Permintaan -->
+        <!-- Modal Lihat Tas -->
         <div id="inv-modal" class="modal">
             <div class="modal-content">
                 <h3 id="modal-inv-title">Inventory Bot</h3>
@@ -361,7 +355,7 @@ app.get('/', (req, res) => {
 
                 const filtered = masterItems.filter(item => item.toLowerCase().includes(keyword));
                 if (filtered.length === 0) {
-                    dropdown.innerHTML = '<div class="dropdown-option" style="color: #94a3b8;">Item tidak ditemukan di Master List</div>';
+                    dropdown.innerHTML = '<div class="dropdown-option" style="color: #94a3b8;">Item tidak ditemukan</div>';
                 } else {
                     dropdown.innerHTML = filtered.map(item => \`
                         <div class="dropdown-option" onclick="addItemChip('\${item}')">+ \${item}</div>
@@ -439,7 +433,6 @@ app.get('/', (req, res) => {
                 document.getElementById('inv-modal').style.display = 'none';
             }
 
-            // Muat data pertama kali saat halaman dibuka (Tanpa interval auto-refresh yang merusak tombol)
             refreshData();
             setInterval(refreshData, 5000);
         </script>
@@ -450,12 +443,10 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Jalankan server lokal HANYA jika tidak berjalan di Vercel (production)
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`Server berjalan di port ${PORT}`);
     });
 }
 
-// INI WAJIB UNTUK VERCEL: Export app agar dibaca sebagai Serverless Function
 module.exports = app;
