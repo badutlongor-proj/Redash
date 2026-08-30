@@ -135,18 +135,19 @@ app.get('/api/dashboard/data', (req, res) => {
 
     // SOLUSI 2: Urutkan RF secara "Pintar" (RF-2 akan di atas RF-11)
     // SOLUSI 2: Urutkan RF secara Teks/Abjad (1, 11, 111, 2, 22, 222)
+    // SOLUSI UTAMA: Kunci urutan berdasarkan awalan RF dan pastikan posisi stabil
     botsList.sort((a, b) => {
-        const rfA = String(a.rf_location);
-        const rfB = String(b.rf_location);
+        const rfA = String(a.rf_location || "").trim();
+        const rfB = String(b.rf_location || "").trim();
         
-        // Membandingkan murni sebagai teks (tanpa mode numeric)
+        // 1. Urutkan berdasarkan teks RF (Contoh: 1, 11, 111, 2, 22...)
         const compareRF = rfA.localeCompare(rfB);
-        
         if (compareRF !== 0) {
-            return compareRF; // Jika RF beda, urutkan berdasarkan teks RF
+            return compareRF; 
         }
         
-        // Jika RF-nya sama, urutkan berdasarkan abjad nama akunnya
+        // 2. Jika RF-nya sama persis, kunci urutan berdasarkan abjad nama akun (Username)
+        // Ini membuat posisi akun 1, akun 2, dst di RF yang sama tidak akan ever naik-turun
         return a.username.localeCompare(b.username);
     });
 
