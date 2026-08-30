@@ -440,7 +440,7 @@ app.get('/', (req, res) => {
 
             // Muat data pertama kali saat halaman dibuka (Tanpa interval auto-refresh yang merusak tombol)
             refreshData();
-            setInterval(refreshData, 3000);
+            setInterval(refreshData, 5000);
         </script>
     </body>
     </html>
