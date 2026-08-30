@@ -107,13 +107,7 @@ app.post('/api/command/config', (req, res) => {
     return res.status(404).json({ error: 'Bot tidak ditemukan' });
 });
 
-app.get('/api/dashboard/data', (req, res) => {
-    const botsList = [];
-    const now = Date.now();
-    let onlineCount = 0;
-    let offlineCount = 0;
-
-    for (let user in botDatabase) {
+for (let user in botDatabase) {
         const bot = botDatabase[user];
         const timeDiff = now - bot.lastHeartbeat;
 
@@ -131,9 +125,12 @@ app.get('/api/dashboard/data', (req, res) => {
             offlineCount++;
         }
         
+        // OPTIMASI: Pisahkan 'inventory' mentah agar tidak ikut dikirim ke frontend
+        const { inventory, ...botDataToSend } = bot;
+
         botsList.push({
             username: user,
-            ...bot,
+            ...botDataToSend, // Hanya mengirim data yang dibutuhkan (termasuk groupedInventory)
             status: currentStatus,
             lastUpdatedFormatted: new Date(bot.lastHeartbeat).toLocaleTimeString('id-ID')
         });
@@ -464,7 +461,7 @@ app.get('/', (req, res) => {
             }
 
             refreshData();
-            setInterval(refreshData, 5000);
+            setInterval(refreshData, 60000);
         </script>
     </body>
     </html>
