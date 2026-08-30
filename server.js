@@ -8,7 +8,6 @@ app.use(express.json());
 
 const botDatabase = {};
 
-// Master List Item Adopt Me Resmi (Full Manual, Sesuai Script Game)
 const MASTER_ADOPT_ME_ITEMS = [
     "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
     "Mythic Egg", "Southeast Asia Egg", "Urban Egg", "Desert Egg", "Japan Egg", "Danger Egg",
@@ -111,29 +110,35 @@ app.post('/api/command/config', (req, res) => {
 app.get('/api/dashboard/data', (req, res) => {
     const botsList = [];
     const now = Date.now();
+    let onlineCount = 0;
+    let offlineCount = 0;
 
     for (let user in botDatabase) {
         const bot = botDatabase[user];
         const timeDiff = now - bot.lastHeartbeat;
 
-        // Hapus permanen jika sudah 24 jam (1 hari) tidak aktif sama sekali
         if (timeDiff > 86400000) {
             delete botDatabase[user];
             continue; 
         }
 
-        // TOLERANSI AKURAT: Bot baru akan terbaca OFFLINE jika tidak melapor selama > 3 menit (180000 ms)
         const isTimeout = timeDiff > 180000;
+        const currentStatus = isTimeout ? 'OFFLINE' : bot.status;
+
+        if (currentStatus === 'ONLINE') {
+            onlineCount++;
+        } else {
+            offlineCount++;
+        }
         
         botsList.push({
             username: user,
             ...bot,
-            status: isTimeout ? 'OFFLINE' : bot.status,
+            status: currentStatus,
             lastUpdatedFormatted: new Date(bot.lastHeartbeat).toLocaleTimeString('id-ID')
         });
     }
 
-    // Urutkan stabil abjad murni
     botsList.sort((a, b) => {
         const rfA = String(a.rf_location || "").trim();
         const rfB = String(b.rf_location || "").trim();
@@ -149,7 +154,14 @@ app.get('/api/dashboard/data', (req, res) => {
     const totalBucks = botsList.reduce((acc, bot) => acc + bot.bucks, 0);
     const totalCrystalEggs = botsList.reduce((acc, bot) => acc + (bot.crystalEggCount || 0), 0);
     
-    res.json({ bots: botsList, totalBucks, totalCrystalEggs, totalBots: botsList.length });
+    res.json({ 
+        bots: botsList, 
+        totalBucks, 
+        totalCrystalEggs, 
+        totalBots: botsList.length,
+        onlineBots: onlineCount,
+        offlineBots: offlineCount
+    });
 });
 
 app.get('/', (req, res) => {
@@ -191,6 +203,13 @@ app.get('/', (req, res) => {
 
         <div class="card-container">
             <div class="card">
+                <h3>Total Akun (Online / Offline)</h3>
+                <p style="font-size: 22px; font-weight: bold;">
+                    <span id="stat-online" style="color: #34d399;">0</span> Online / 
+                    <span id="stat-offline" style="color: #f87171;">0</span> Offline
+                </p>
+            </div>
+            <div class="card">
                 <h3>Total Pendapatan Bucks</h3>
                 <p id="total-bucks" style="font-size: 24px; color: #facc15; font-weight: bold;">0</p>
             </div>
@@ -208,7 +227,9 @@ app.get('/', (req, res) => {
                         <th>RF</th><th>Username</th><th>Status</th><th>Bucks</th><th>Crystal Egg</th><th>Auto-Trade</th><th>Aksi Kontrol</th>
                     </tr>
                 </thead>
-                <tbody id="bot-table"></tbody>
+                <tbody id="bot-table">
+                    <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Memuat data bot...</td></tr>
+                </tbody>
             </table>
         </div>
 
@@ -277,12 +298,22 @@ app.get('/', (req, res) => {
                 try {
                     const res = await fetch('/api/dashboard/data');
                     const data = await res.json();
+                    
+                    if (!data || !data.bots) return;
+                    
                     globalBotsData = data.bots;
                     
-                    document.getElementById('total-bucks').innerText = data.totalBucks.toLocaleString('id-ID');
-                    document.getElementById('total-eggs').innerText = data.totalCrystalEggs.toLocaleString('id-ID');
+                    document.getElementById('stat-online').innerText = data.onlineBots || 0;
+                    document.getElementById('stat-offline').innerText = data.offlineBots || 0;
+                    document.getElementById('total-bucks').innerText = (data.totalBucks || 0).toLocaleString('id-ID');
+                    document.getElementById('total-eggs').innerText = (data.totalCrystalEggs || 0).toLocaleString('id-ID');
                     
                     const tbody = document.getElementById('bot-table');
+                    if (data.bots.length === 0) {
+                        tbody.innerHTML = "<tr><td colspan='7' style='text-align: center; color: #94a3b8;'>Belum ada bot yang mengirim data.</td></tr>";
+                        return;
+                    }
+
                     tbody.innerHTML = data.bots.map(bot => {
                         const statusColor = bot.status === 'ONLINE' ? '#34d399' : '#f87171';
                         const isTradeActive = bot.autotrade_status;
@@ -290,10 +321,10 @@ app.get('/', (req, res) => {
                         const tradeBtnText = isTradeActive ? 'ACTIVE (ON)' : 'OFF';
 
                         return \`<tr>
-                            <td>\${bot.rf_location}</td>
+                            <td>\${bot.rf_location || 'Unknown'}</td>
                             <td><strong>\${bot.username}</strong></td>
                             <td style="color: \${statusColor};">\${bot.status}</td>
-                            <td style="color: #facc15;">\${bot.bucks}</td>
+                            <td style="color: #facc15;">\${bot.bucks || 0}</td>
                             <td style="color: #38bdf8; font-weight: bold;">\${bot.crystalEggCount || 0}</td>
                             <td><span class="\${tradeBtnClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">\${tradeBtnText}</span></td>
                             <td>
@@ -302,7 +333,7 @@ app.get('/', (req, res) => {
                             </td>
                         </tr>\`;
                     }).join('');
-                } catch(e) { console.error(e); }
+                } catch(e) { console.error("Gagal memuat data:", e); }
             }
 
             function openTradeModalSafe(username, currentStatus) {
