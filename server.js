@@ -123,7 +123,6 @@ app.get('/api/dashboard/data', (req, res) => {
         }
 
         // TOLERANSI AKURAT: Bot baru akan terbaca OFFLINE jika tidak melapor selama > 3 menit (180000 ms)
-        // Ini sangat aman untuk mengantisipasi delay script 60 detik + sedikit lag Roblox
         const isTimeout = timeDiff > 180000;
         
         botsList.push({
