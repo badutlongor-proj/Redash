@@ -107,7 +107,13 @@ app.post('/api/command/config', (req, res) => {
     return res.status(404).json({ error: 'Bot tidak ditemukan' });
 });
 
-for (let user in botDatabase) {
+app.get('/api/dashboard/data', (req, res) => {
+    const botsList = [];
+    const now = Date.now();
+    let onlineCount = 0;
+    let offlineCount = 0;
+
+    for (let user in botDatabase) {
         const bot = botDatabase[user];
         const timeDiff = now - bot.lastHeartbeat;
 
