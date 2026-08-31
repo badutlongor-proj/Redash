@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
 const app = express();
 const SECRET_TOKEN = "RAHASIA_RF_123"; 
@@ -6,11 +8,30 @@ const SECRET_TOKEN = "RAHASIA_RF_123";
 app.use(cors());
 app.use(express.json());
 
-// Menggunakan global caching agar database tidak mudah terhapus di Vercel
-if (!global.botDatabase) {
-    global.botDatabase = {};
+// Path file penyimpanan sementara di Vercel (/tmp folder)
+const DB_FILE = path.join('/tmp', 'botDatabase.json');
+
+// Fungsi membaca database dari file
+function loadDatabase() {
+    try {
+        if (fs.existsSync(DB_FILE)) {
+            const data = fs.readFileSync(DB_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error("Gagal membaca DB:", e);
+    }
+    return {};
 }
-const botDatabase = global.botDatabase;
+
+// Fungsi menyimpan database ke file
+function saveDatabase(db) {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(db), 'utf8');
+    } catch (e) {
+        console.error("Gagal menyimpan DB:", e);
+    }
+}
 
 const MASTER_ADOPT_ME_ITEMS = [
     "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
@@ -40,6 +61,8 @@ app.post('/api/telemetry', (req, res) => {
 
         const { username, rf_location, status, bucks, inventory, autotrade_status } = req.body || {};
         if (!username) return res.status(400).json({ error: 'Missing username' });
+
+        let botDatabase = loadDatabase();
 
         if (!botDatabase[username]) {
             botDatabase[username] = { pendingCommands: [] };
@@ -99,6 +122,7 @@ app.post('/api/telemetry', (req, res) => {
             command = botDatabase[username].pendingCommands.shift();
         }
 
+        saveDatabase(botDatabase);
         return res.json({ success: true, command: command });
     } catch (err) {
         return res.status(500).json({ error: err.message });
@@ -108,6 +132,7 @@ app.post('/api/telemetry', (req, res) => {
 app.post('/api/command/config', (req, res) => {
     try {
         const { bot_username, autotrade, item_target, receiver } = req.body || {};
+        let botDatabase = loadDatabase();
         
         if (bot_username && botDatabase[bot_username]) {
             if (!botDatabase[bot_username].pendingCommands) {
@@ -120,6 +145,7 @@ app.post('/api/command/config', (req, res) => {
                 receiver: receiver
             });
             botDatabase[bot_username].autotrade_status = autotrade;
+            saveDatabase(botDatabase);
             return res.json({ success: true });
         }
         return res.status(404).json({ error: 'Bot tidak ditemukan' });
@@ -130,6 +156,7 @@ app.post('/api/command/config', (req, res) => {
 
 app.get('/api/dashboard/data', (req, res) => {
     try {
+        let botDatabase = loadDatabase();
         const botsList = [];
         const now = Date.now();
         let onlineCount = 0;
@@ -139,8 +166,7 @@ app.get('/api/dashboard/data', (req, res) => {
             const bot = botDatabase[user];
             const timeDiff = now - (bot.lastHeartbeat || 0);
 
-            // Batas waktu timeout diperbesar jadi 2 jam agar bot tidak gampang terhapus
-            if (timeDiff > 7200000) {
+            if (timeDiff > 86400000) {
                 delete botDatabase[user];
                 continue; 
             }
@@ -163,6 +189,8 @@ app.get('/api/dashboard/data', (req, res) => {
                 lastUpdatedFormatted: new Date(bot.lastHeartbeat || now).toLocaleTimeString('id-ID')
             });
         }
+
+        saveDatabase(botDatabase);
 
         botsList.sort((a, b) => {
             const rfA = String(a.rf_location || "").trim();
@@ -314,7 +342,7 @@ app.get('/', (req, res) => {
                 
                 const tbody = document.getElementById('bot-table');
                 if (data.bots.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada bot yang mengirim data. (Pastikan script Roblox sudah mengirim telemetry)</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada bot mengirim data. Jalankan script Roblox sekarang!</td></tr>';
                     return;
                 }
 
