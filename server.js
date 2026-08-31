@@ -327,8 +327,8 @@ app.get('/', (req, res) => {
                             <td>\${bot.rf_location || 'Unknown'}</td>
                             <td><strong>\${bot.username}</strong></td>
                             <td style="color: \${statusColor};">\${bot.status}</td>
-                            <td style="color: #facc15;">\${bot.bucks || 0}</td>
-                            <td style="color: #38bdf8; font-weight: bold;">\${bot.crystalEggCount || 0}</td>
+                            <td style="color: #facc15;">\${bot.bucks ? bot.bucks : ''}</td>
+                            <td style="color: #38bdf8; font-weight: bold;">\${bot.crystalEggCount ? bot.crystalEggCount : ''}</td>
                             <td><span class="\${tradeBtnClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">\${tradeBtnText}</span></td>
                             <td>
                                 <button class="btn" onclick="openTradeModalSafe('\${bot.username}', \${isTradeActive})">Atur Trade</button>
