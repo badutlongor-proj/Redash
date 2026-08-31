@@ -6,7 +6,11 @@ const SECRET_TOKEN = "RAHASIA_RF_123";
 app.use(cors());
 app.use(express.json());
 
-const botDatabase = {};
+// Menggunakan global caching agar database tidak mudah terhapus di Vercel
+if (!global.botDatabase) {
+    global.botDatabase = {};
+}
+const botDatabase = global.botDatabase;
 
 const MASTER_ADOPT_ME_ITEMS = [
     "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
@@ -135,7 +139,8 @@ app.get('/api/dashboard/data', (req, res) => {
             const bot = botDatabase[user];
             const timeDiff = now - (bot.lastHeartbeat || 0);
 
-            if (timeDiff > 86400000) {
+            // Batas waktu timeout diperbesar jadi 2 jam agar bot tidak gampang terhapus
+            if (timeDiff > 7200000) {
                 delete botDatabase[user];
                 continue; 
             }
@@ -309,7 +314,7 @@ app.get('/', (req, res) => {
                 
                 const tbody = document.getElementById('bot-table');
                 if (data.bots.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada bot yang mengirim data.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada bot yang mengirim data. (Pastikan script Roblox sudah mengirim telemetry)</td></tr>';
                     return;
                 }
 
