@@ -92,18 +92,38 @@ app.post('/api/telemetry', (req, res) => {
 });
 
 app.post('/api/command/config', (req, res) => {
-    const { bot_username, autotrade, item_target, receiver } = req.body;
+    const { usernames, bot_username, autotrade, item_target, receiver } = req.body;
     
-    if (botDatabase[bot_username]) {
-        botDatabase[bot_username].pendingCommands.push({
-            type: "UPDATE_CONFIG",
-            autotrade: autotrade,
-            item_target: item_target,
-            receiver: receiver
-        });
-        botDatabase[bot_username].autotrade_status = autotrade;
-        return res.json({ success: true });
+    let targetList = [];
+    if (Array.isArray(usernames) && usernames.length > 0) {
+        targetList = usernames;
+    } else if (bot_username) {
+        targetList = [bot_username];
     }
+
+    if (targetList.length === 0) {
+        return res.status(400).json({ error: 'Tidak ada bot yang dipilih' });
+    }
+
+    let successCount = 0;
+
+    targetList.forEach(username => {
+        if (botDatabase[username]) {
+            botDatabase[username].pendingCommands.push({
+                type: "UPDATE_CONFIG",
+                autotrade: autotrade,
+                item_target: item_target,
+                receiver: receiver
+            });
+            botDatabase[username].autotrade_status = autotrade;
+            successCount++;
+        }
+    });
+
+    if (successCount > 0) {
+        return res.json({ success: true, message: `Berhasil mengirim perintah ke ${successCount} bot.` });
+    }
+    
     return res.status(404).json({ error: 'Bot tidak ditemukan' });
 });
 
@@ -131,12 +151,11 @@ app.get('/api/dashboard/data', (req, res) => {
             offlineCount++;
         }
         
-        // OPTIMASI: Pisahkan 'inventory' mentah agar tidak ikut dikirim ke frontend
         const { inventory, ...botDataToSend } = bot;
 
         botsList.push({
             username: user,
-            ...botDataToSend, // Hanya mengirim data yang dibutuhkan (termasuk groupedInventory)
+            ...botDataToSend, 
             status: currentStatus,
             lastUpdatedFormatted: new Date(bot.lastHeartbeat).toLocaleTimeString('id-ID')
         });
@@ -200,8 +219,9 @@ app.get('/', (req, res) => {
     <body>
         <h2>🤖 Adopt Me - Ultimate Dashboard</h2>
         
-        <div style="margin-bottom: 15px;">
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn" onclick="refreshData()" style="background: #0284c7;">🔄 Refresh Data Manual</button>
+            <button class="btn btn-on" onclick="openBulkTradeModal()">⚙️ Atur Trade Akun Terpilih (Massal)</button>
         </div>
 
         <div class="card-container">
@@ -227,11 +247,12 @@ app.get('/', (req, res) => {
             <table>
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="select-all-bots" onclick="toggleSelectAll(this)"></th>
                         <th>RF</th><th>Username</th><th>Status</th><th>Bucks</th><th>Crystal Egg</th><th>Auto-Trade</th><th>Aksi Kontrol</th>
                     </tr>
                 </thead>
                 <tbody id="bot-table">
-                    <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Memuat data bot...</td></tr>
+                    <tr><td colspan="8" style="text-align: center; color: #94a3b8;">Memuat data bot...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -284,6 +305,7 @@ app.get('/', (req, res) => {
             let globalBotsData = [];
             let activeUsername = "";
             let selectedTradeItems = [];
+            let isBulkAction = false;
 
             const masterItems = [
                 "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
@@ -296,6 +318,11 @@ app.get('/', (req, res) => {
                 "Golden Apple", "Cotton Candy", "Hot Dog", "Pizza", "Coffee", "Tealwood Monster Bait",
                 "Rat Box", "Boba Car", "Bathtub", "Cloud Stroller", "Telescope Pogo"
             ];
+
+            function toggleSelectAll(source) {
+                const checkboxes = document.querySelectorAll('.bot-checkbox');
+                checkboxes.forEach(cb => cb.checked = source.checked);
+            }
 
             async function refreshData() {
                 try {
@@ -313,7 +340,7 @@ app.get('/', (req, res) => {
                     
                     const tbody = document.getElementById('bot-table');
                     if (data.bots.length === 0) {
-                        tbody.innerHTML = "<tr><td colspan='7' style='text-align: center; color: #94a3b8;'>Belum ada bot yang mengirim data.</td></tr>";
+                        tbody.innerHTML = "<tr><td colspan='8' style='text-align: center; color: #94a3b8;'>Belum ada bot yang mengirim data.</td></tr>";
                         return;
                     }
 
@@ -323,28 +350,50 @@ app.get('/', (req, res) => {
                         const tradeBtnClass = isTradeActive ? 'btn btn-on' : 'btn btn-off';
                         const tradeBtnText = isTradeActive ? 'ACTIVE (ON)' : 'OFF';
 
-                        return \`<tr>
-                            <td>\${bot.rf_location || 'Unknown'}</td>
-                            <td><strong>\${bot.username}</strong></td>
-                            <td style="color: \${statusColor};">\${bot.status}</td>
-                            <td style="color: #facc15;">\${bot.bucks || 0}</td>
-                            <td style="color: #38bdf8; font-weight: bold;">\${bot.crystalEggCount || 0}</td>
-                            <td><span class="\${tradeBtnClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">\${tradeBtnText}</span></td>
+                        return `<tr>
+                            <td><input type="checkbox" class="bot-checkbox" value="${bot.username}"></td>
+                            <td>${bot.rf_location || 'Unknown'}</td>
+                            <td><strong>${bot.username}</strong></td>
+                            <td style="color: ${statusColor};">${bot.status}</td>
+                            <td style="color: #facc15;">${bot.bucks || 0}</td>
+                            <td style="color: #38bdf8; font-weight: bold;">${bot.crystalEggCount || 0}</td>
+                            <td><span class="${tradeBtnClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">${tradeBtnText}</span></td>
                             <td>
-                                <button class="btn" onclick="openTradeModalSafe('\${bot.username}', \${isTradeActive})">Atur Trade</button>
-                                <button class="btn" style="background: #475569;" onclick="openInventory('\${bot.username}')">Tas</button>
+                                <button class="btn" onclick="openSingleTradeModal('${bot.username}', ${isTradeActive})">Atur</button>
+                                <button class="btn" style="background: #475569;" onclick="openInventory('${bot.username}')">Tas</button>
                             </td>
-                        </tr>\`;
+                        </tr>`;
                     }).join('');
                 } catch(e) { console.error("Gagal memuat data:", e); }
             }
 
-            function openTradeModalSafe(username, currentStatus) {
+            function openBulkTradeModal() {
+                const selectedCheckboxes = document.querySelectorAll('.bot-checkbox:checked');
+                if (selectedCheckboxes.length === 0) {
+                    alert("Pilih minimal 1 bot terlebih dahulu dengan mencentang kotaknya!");
+                    return;
+                }
+
+                isBulkAction = true;
+                document.getElementById('target-bot-username').value = '';
+                document.getElementById('modal-trade-title').innerText = \`Mass Config Trade (\${selectedCheckboxes.length} Akun Dipilih)\`;
+                document.getElementById('select-autotrade').value = "true";
+                
+                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrown"]; 
+                renderSelectedChips();
+                document.getElementById('trade-search-input').value = '';
+                document.getElementById('trade-dropdown').style.display = 'none';
+
+                document.getElementById('trade-modal').style.display = 'block';
+            }
+
+            function openSingleTradeModal(username, currentStatus) {
+                isBulkAction = false;
                 document.getElementById('target-bot-username').value = username;
                 document.getElementById('select-autotrade').value = currentStatus.toString();
                 document.getElementById('modal-trade-title').innerText = "Trade Config: " + username;
                 
-                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl"]; 
+                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrown"]; 
                 renderSelectedChips();
                 document.getElementById('trade-search-input').value = '';
                 document.getElementById('trade-dropdown').style.display = 'none';
@@ -402,24 +451,38 @@ app.get('/', (req, res) => {
             }
 
             async function saveTradeConfig() {
-                const username = document.getElementById('target-bot-username').value;
                 const autotrade = document.getElementById('select-autotrade').value === 'true';
                 const receiver = document.getElementById('input-receiver').value;
-
                 const itemTargetString = selectedTradeItems.length > 0 ? selectedTradeItems.join(', ') : 'Crystal Egg';
 
-                await fetch('/api/command/config', {
+                let payload = {
+                    autotrade: autotrade,
+                    item_target: itemTargetString,
+                    receiver: receiver
+                };
+
+                if (isBulkAction) {
+                    const selectedCheckboxes = document.querySelectorAll('.bot-checkbox:checked');
+                    let usernames = [];
+                    selectedCheckboxes.forEach(cb => usernames.push(cb.value));
+                    payload.usernames = usernames;
+                } else {
+                    payload.bot_username = document.getElementById('target-bot-username').value;
+                }
+
+                const res = await fetch('/api/command/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        bot_username: username, 
-                        autotrade: autotrade,
-                        item_target: itemTargetString,
-                        receiver: receiver
-                    })
+                    body: JSON.stringify(payload)
                 });
-                closeTradeModal();
-                refreshData();
+
+                const result = await res.json();
+                if (result.success) {
+                    closeTradeModal();
+                    refreshData();
+                } else {
+                    alert("Gagal menyimpan konfigurasi: " + (result.error || 'Terjadi kesalahan'));
+                }
             }
 
             function openInventory(username) {
