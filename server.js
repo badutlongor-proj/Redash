@@ -9,7 +9,7 @@ app.use(express.json());
 const botDatabase = {};
 
 const MASTER_ADOPT_ME_ITEMS = [
-    "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
+    "Admin Abuse Egg", "Crystal Egg", "Cracked Egg", "Pet Egg", "Royal Egg", "Aussie Egg", "Fossil Egg", 
     "Mythic Egg", "Southeast Asia Egg", "Urban Egg", "Desert Egg", "Japan Egg", "Danger Egg",
     "Alicorn", "Ancient Dragon", "Shadow Dragon", "Bat Dragon", "Frost Dragon", "Giraffe", 
     "Owl", "Parrot", "Evil Unicorn", "Crow", "Arctic Reindeer", "Turtle", "Kangaroo", 
@@ -344,7 +344,7 @@ app.get('/', (req, res) => {
                 document.getElementById('select-autotrade').value = currentStatus.toString();
                 document.getElementById('modal-trade-title').innerText = "Trade Config: " + username;
                 
-                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl"]; 
+                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl", "Admin Abuse Egg"]; 
                 renderSelectedChips();
                 document.getElementById('trade-search-input').value = '';
                 document.getElementById('trade-dropdown').style.display = 'none';
