@@ -30,9 +30,11 @@ function cleanItemName(rawName) {
 
 app.post('/api/telemetry', (req, res) => {
     try {
-        if (req.headers['authorization'] !== SECRET_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
+        if (!req.headers || req.headers['authorization'] !== SECRET_TOKEN) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
 
-        const { username, rf_location, status, bucks, inventory, autotrade_status } = req.body;
+        const { username, rf_location, status, bucks, inventory, autotrade_status } = req.body || {};
         if (!username) return res.status(400).json({ error: 'Missing username' });
 
         if (!botDatabase[username]) {
@@ -88,9 +90,10 @@ app.post('/api/telemetry', (req, res) => {
             lastHeartbeat: Date.now()
         };
 
-        const command = (botDatabase[username].pendingCommands && botDatabase[username].pendingCommands.length > 0) 
-            ? botDatabase[username].pendingCommands.shift() 
-            : null;
+        let command = null;
+        if (botDatabase[username].pendingCommands && botDatabase[username].pendingCommands.length > 0) {
+            command = botDatabase[username].pendingCommands.shift();
+        }
 
         return res.json({ success: true, command: command });
     } catch (err) {
@@ -100,9 +103,9 @@ app.post('/api/telemetry', (req, res) => {
 
 app.post('/api/command/config', (req, res) => {
     try {
-        const { bot_username, autotrade, item_target, receiver } = req.body;
+        const { bot_username, autotrade, item_target, receiver } = req.body || {};
         
-        if (botDatabase[bot_username]) {
+        if (bot_username && botDatabase[bot_username]) {
             if (!botDatabase[bot_username].pendingCommands) {
                 botDatabase[bot_username].pendingCommands = [];
             }
@@ -130,7 +133,7 @@ app.get('/api/dashboard/data', (req, res) => {
 
         for (let user in botDatabase) {
             const bot = botDatabase[user];
-            const timeDiff = now - bot.lastHeartbeat;
+            const timeDiff = now - (bot.lastHeartbeat || 0);
 
             if (timeDiff > 86400000) {
                 delete botDatabase[user];
@@ -152,7 +155,7 @@ app.get('/api/dashboard/data', (req, res) => {
                 username: user,
                 ...botDataToSend, 
                 status: currentStatus,
-                lastUpdatedFormatted: new Date(bot.lastHeartbeat).toLocaleTimeString('id-ID')
+                lastUpdatedFormatted: new Date(bot.lastHeartbeat || now).toLocaleTimeString('id-ID')
             });
         }
 
@@ -181,7 +184,8 @@ app.get('/api/dashboard/data', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    const htmlContent = `<!DOCTYPE html>
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -470,8 +474,7 @@ app.get('/', (req, res) => {
         setInterval(refreshData, 60000);
     </script>
 </body>
-</html>`;
-    res.send(htmlContent);
+</html>`);
 });
 
 const PORT = process.env.PORT || 3000;
