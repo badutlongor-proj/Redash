@@ -350,19 +350,19 @@ app.get('/', (req, res) => {
                         const tradeBtnClass = isTradeActive ? 'btn btn-on' : 'btn btn-off';
                         const tradeBtnText = isTradeActive ? 'ACTIVE (ON)' : 'OFF';
 
-                        return `<tr>
-                            <td><input type="checkbox" class="bot-checkbox" value="${bot.username}"></td>
-                            <td>${bot.rf_location || 'Unknown'}</td>
-                            <td><strong>${bot.username}</strong></td>
-                            <td style="color: ${statusColor};">${bot.status}</td>
-                            <td style="color: #facc15;">${bot.bucks || 0}</td>
-                            <td style="color: #38bdf8; font-weight: bold;">${bot.crystalEggCount || 0}</td>
-                            <td><span class="${tradeBtnClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">${tradeBtnText}</span></td>
-                            <td>
-                                <button class="btn" onclick="openSingleTradeModal('${bot.username}', ${isTradeActive})">Atur</button>
-                                <button class="btn" style="background: #475569;" onclick="openInventory('${bot.username}')">Tas</button>
-                            </td>
-                        </tr>`;
+                        return '<tr>' +
+                            '<td><input type="checkbox" class="bot-checkbox" value="' + bot.username + '"></td>' +
+                            '<td>' + (bot.rf_location || 'Unknown') + '</td>' +
+                            '<td><strong>' + bot.username + '</strong></td>' +
+                            '<td style="color: ' + statusColor + ';">' + bot.status + '</td>' +
+                            '<td style="color: #facc15;">' + (bot.bucks || 0) + '</td>' +
+                            '<td style="color: #38bdf8; font-weight: bold;">' + (bot.crystalEggCount || 0) + '</td>' +
+                            '<td><span class="' + tradeBtnClass + '" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + tradeBtnText + '</span></td>' +
+                            '<td>' +
+                                '<button class="btn" onclick="openSingleTradeModal(\\'' + bot.username + '\\', ' + isTradeActive + ')">Atur</button> ' +
+                                '<button class="btn" style="background: #475569;" onclick="openInventory(\\'' + bot.username + '\\')">Tas</button>' +
+                            '</td>' +
+                        '</tr>';
                     }).join('');
                 } catch(e) { console.error("Gagal memuat data:", e); }
             }
@@ -376,7 +376,7 @@ app.get('/', (req, res) => {
 
                 isBulkAction = true;
                 document.getElementById('target-bot-username').value = '';
-                document.getElementById('modal-trade-title').innerText = \`Mass Config Trade (\${selectedCheckboxes.length} Akun Dipilih)\`;
+                document.getElementById('modal-trade-title').innerText = "Mass Config Trade (" + selectedCheckboxes.length + " Akun Dipilih)";
                 document.getElementById('select-autotrade').value = "true";
                 
                 selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrown"]; 
@@ -407,9 +407,9 @@ app.get('/', (req, res) => {
                     container.innerHTML = '<span style="color: #94a3b8; font-size: 12px;">Belum ada item dipilih</span>';
                     return;
                 }
-                container.innerHTML = selectedTradeItems.map((item, index) => \`
-                    <div class="item-chip">\${item} <span onclick="removeItemChip(\${index})">&times;</span></div>
-                \`).join('');
+                container.innerHTML = selectedTradeItems.map((item, index) => 
+                    '<div class="item-chip">' + item + ' <span onclick="removeItemChip(' + index + ')">&times;</span></div>'
+                ).join('');
             }
 
             function addItemChip(itemName) {
@@ -439,9 +439,9 @@ app.get('/', (req, res) => {
                 if (filtered.length === 0) {
                     dropdown.innerHTML = '<div class="dropdown-option" style="color: #94a3b8;">Item tidak ditemukan</div>';
                 } else {
-                    dropdown.innerHTML = filtered.map(item => \`
-                        <div class="dropdown-option" onclick="addItemChip('\${item}')">+ \${item}</div>
-                    \`).join('');
+                    dropdown.innerHTML = filtered.map(item => 
+                        '<div class="dropdown-option" onclick="addItemChip(\\'' + item + '\\')">+ ' + item + '</div>'
+                    ).join('');
                 }
                 dropdown.style.display = 'block';
             }
@@ -489,7 +489,7 @@ app.get('/', (req, res) => {
                 activeUsername = username;
                 document.getElementById('inv-search').value = '';
                 renderInventoryTable();
-                document.getElementById('modal-inv-title').innerText = \`Tas: \${username}\`;
+                document.getElementById('modal-inv-title').innerText = "Tas: " + username;
                 document.getElementById('inv-modal').style.display = 'block';
             }
 
@@ -511,13 +511,13 @@ app.get('/', (req, res) => {
                     return;
                 }
 
-                invTableBody.innerHTML = filtered.map(item => \`
-                    <tr>
-                        <td><strong>\${item.name}</strong></td>
-                        <td style="color: #38bdf8; font-weight: bold;">\${item.count}</td>
-                        <td>\${item.type}</td>
-                    </tr>
-                \`).join('');
+                invTableBody.innerHTML = filtered.map(item => 
+                    '<tr>' +
+                        '<td><strong>' + item.name + '</strong></td>' +
+                        '<td style="color: #38bdf8; font-weight: bold;">' + item.count + '</td>' +
+                        '<td>' + item.type + '</td>' +
+                    '</tr>'
+                ).join('');
             }
 
             function filterInventory() {
