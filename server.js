@@ -252,7 +252,7 @@ app.get('/', (req, res) => {
                 <div id="trade-dropdown" class="dropdown-list"></div>
                 
                 <label>Username Penerima (Receiver):</label>
-                <input type="text" id="input-receiver" value="Fishstore200">
+                <input type="text" id="input-receiver" value="fishstore200">
                 
                 <label>Status Auto Trade:</label>
                 <select id="select-autotrade">
@@ -344,7 +344,7 @@ app.get('/', (req, res) => {
                 document.getElementById('select-autotrade').value = currentStatus.toString();
                 document.getElementById('modal-trade-title').innerText = "Trade Config: " + username;
                 
-                selectedTradeItems = ["Crystal Egg"]; 
+                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl"]; 
                 renderSelectedChips();
                 document.getElementById('trade-search-input').value = '';
                 document.getElementById('trade-dropdown').style.display = 'none';
