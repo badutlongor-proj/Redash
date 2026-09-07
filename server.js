@@ -344,7 +344,7 @@ app.get('/', (req, res) => {
                 document.getElementById('select-autotrade').value = currentStatus.toString();
                 document.getElementById('modal-trade-title').innerText = "Trade Config: " + username;
                 
-                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl", "Admin Abuse Egg"]; 
+                selectedTradeItems = ["Crystal Egg", "Alicorn", "Ancient Dragon", "Purrowl", "Dragonfly", "Admin Abuse Egg"]; 
                 renderSelectedChips();
                 document.getElementById('trade-search-input').value = '';
                 document.getElementById('trade-dropdown').style.display = 'none';
