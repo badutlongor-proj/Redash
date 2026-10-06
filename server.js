@@ -1,5 +1,5 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 const app = express();
 const SECRET_TOKEN = "RAHASIA_RF_123"; 
 
@@ -474,7 +474,5 @@ app.get('/', (req, res) => {
     `);
 });
 
-const PORT = process.env.PORT || 3000;
 
-
-module.exports = app;
+export default app;
