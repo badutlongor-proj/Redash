@@ -4,4 +4,6 @@ import app from "./server.js";
 
 const server = createServer(app);
 
-export default httpServerHandler(server);
+server.listen(3000);
+
+export default httpServerHandler({ port: 3000 });
