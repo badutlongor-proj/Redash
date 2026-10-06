@@ -1,8 +1,7 @@
-import app from "./server.js";
+import { createServer } from "node:http";
 import { httpServerHandler } from "cloudflare:node";
+import app from "./server.js";
 
-export default httpServerHandler({
-  port: 3000,
-  defaultPort: 3000,
-  handler: app
-});
+const server = createServer(app);
+
+export default httpServerHandler(server);
